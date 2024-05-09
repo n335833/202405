@@ -1,0 +1,104 @@
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
+
+class Program
+{
+    static void Main()
+    {
+        string sourceDirectory = @"C:\";
+
+        // 遍歷主資料夾及其子資料夾中的所有檔案
+        string[] files = Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories);
+
+        Dictionary<string, int> fileCount = new Dictionary<string, int>();
+        Dictionary<string, List<string>> hashDict = new Dictionary<string, List<string>>();
+
+        foreach (string file in files)
+        {
+            if (IsImage(file))
+            {
+                using (Bitmap bmp = new Bitmap(file))
+                {
+                    string hash = GetImageHash(bmp);
+
+                    if (!hashDict.ContainsKey(hash))
+                    {
+                        hashDict[hash] = new List<string>();
+                    }
+
+                    hashDict[hash].Add(file);
+                }
+            }
+            else
+            {
+                string extension = Path.GetExtension(file);
+                if (!string.IsNullOrEmpty(extension))
+                {
+                    string destinationDirectory = Path.Combine(sourceDirectory, extension.TrimStart('.').ToUpper());
+
+                    if (!Directory.Exists(destinationDirectory))
+                    {
+                        Directory.CreateDirectory(destinationDirectory);
+                    }
+
+                    string fileName = Path.GetFileNameWithoutExtension(file);
+                    string destinationFile = Path.Combine(destinationDirectory, Path.GetFileName(file));
+
+                    // Check for duplicate files
+                    int count = 1;
+                    while (File.Exists(destinationFile))
+                    {
+                        string newFileName = $"{fileName}_{count}{extension}";
+                        destinationFile = Path.Combine(destinationDirectory, newFileName);
+                        count++;
+                    }
+
+                    File.Move(file, destinationFile);
+                    Console.WriteLine($"Moved {file} to {destinationFile}");
+                }
+            }
+        }
+
+        // Handle duplicate images
+        foreach (var hashEntry in hashDict)
+        {
+            if (hashEntry.Value.Count > 1)
+            {
+                int count = 1;
+                foreach (string file in hashEntry.Value)
+                {
+                    string newFileName = Path.GetFileNameWithoutExtension(file) + "_" + count + Path.GetExtension(file);
+                    string destinationFile = Path.Combine(Path.GetDirectoryName(file), newFileName);
+                    while (File.Exists(destinationFile))
+                    {
+                        newFileName = Path.GetFileNameWithoutExtension(file) + "_" + count + Path.GetExtension(file);
+                        destinationFile = Path.Combine(Path.GetDirectoryName(file), newFileName);
+                        count++;
+                    }
+                    File.Move(file, destinationFile);
+                    Console.WriteLine($"Renamed duplicate image {file} to {newFileName}");
+                }
+            }
+        }
+
+        Console.WriteLine("Done!");
+    }
+
+    static bool IsImage(string fileName)
+    {
+        string extension = Path.GetExtension(fileName).ToLower();
+        return extension == ".bmp" || extension == ".jpg" || extension == ".jpeg" || extension == ".png" || extension == ".gif";
+    }
+
+    static string GetImageHash(Bitmap bmp)
+    {
+        using (var ms = new MemoryStream())
+        {
+            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+            byte[] imageBytes = ms.ToArray();
+            return BitConverter.ToString(System.Security.Cryptography.MD5.Create().ComputeHash(imageBytes));
+        }
+    }
+}
