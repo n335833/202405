@@ -1,0 +1,35 @@
+using System;
+using System.Net.Http;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main()
+    {
+        string targetUrl = "https://data.gov.tw/dataset/45503";
+        string searchStringPattern = @"https://opendata.wra.gov.tw/CloudFile/getFile.ashx\?id=([A-F0-9-]+)";
+
+        using (HttpClient client = new HttpClient())
+        {
+            try
+            {
+                string pageContent = await client.GetStringAsync(targetUrl);
+                Match match = Regex.Match(pageContent, searchStringPattern);
+                if (match.Success)
+                {
+                    string serialNumber = match.Groups[1].Value;
+                    Console.WriteLine($"Found the target serial number: {serialNumber}");
+                }
+                else
+                {
+                    Console.WriteLine($"Target string not found in the page content.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching page content: {ex.Message}");
+            }
+        }
+    }
+}
