@@ -1,0 +1,61 @@
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using Newtonsoft.Json;
+
+namespace WindowsFormsApp
+{
+    public partial class MainForm : Form
+    {
+        public MainForm()
+        {
+            InitializeComponent();
+        }
+
+        private async void CallApiButton_Click(object sender, EventArgs e)
+        {
+            string id = idTextBox.Text;
+            string name = nameTextBox.Text;
+
+            // 將參數轉換為 JSON 格式
+            string json = JsonConvert.SerializeObject(new { id, name });
+
+            using (HttpClient client = new HttpClient())
+            {
+                // 設定 REST API 的 URL
+                string apiUrl = "YOUR_REST_API_URL";
+
+                // 建立要發送的內容
+                HttpContent content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                try
+                {
+                    // 發送 POST 請求
+                    HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+
+                    // 確認回應是否成功
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // 讀取回傳的內容
+                        string responseContent = await response.Content.ReadAsStringAsync();
+
+                        // 對回傳的內容進行處理
+                        MessageBox.Show(responseContent, "API Response", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    else
+                    {
+                        // 處理錯誤情況
+                        MessageBox.Show("Error: " + response.StatusCode, "API Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 處理例外情況
+                    MessageBox.Show("An error occurred: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+    }
+}
