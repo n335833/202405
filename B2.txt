@@ -1,0 +1,58 @@
+using System;
+using System.Data;
+using IBM.Data.DB2;
+
+namespace DB2ToClass
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string connectionString = "Server=myServerAddress;Database=myDataBase;User Id=myUsername;Password=myPassword;";
+            string query = "SELECT * FROM temp FETCH FIRST 1 ROW ONLY";
+
+            using (DB2Connection conn = new DB2Connection(connectionString))
+            {
+                DB2Command cmd = new DB2Command(query, conn);
+                conn.Open();
+                
+                using (DB2DataReader reader = cmd.ExecuteReader())
+                {
+                    DataTable schemaTable = reader.GetSchemaTable();
+                    if (schemaTable != null)
+                    {
+                        Console.WriteLine("public class Temp");
+                        Console.WriteLine("{");
+
+                        foreach (DataRow row in schemaTable.Rows)
+                        {
+                            string columnName = row["ColumnName"].ToString();
+                            string columnType = GetCSharpType(row["DataType"].ToString());
+
+                            Console.WriteLine($"    public {columnType} {columnName} {{ get; set; }}");
+                        }
+
+                        Console.WriteLine("}");
+                    }
+                }
+            }
+        }
+
+        static string GetCSharpType(string dbType)
+        {
+            switch (dbType)
+            {
+                case "System.Int32": return "int";
+                case "System.String": return "string";
+                case "System.Decimal": return "decimal";
+                case "System.DateTime": return "DateTime";
+                case "System.Boolean": return "bool";
+                case "System.Byte": return "byte";
+                case "System.Double": return "double";
+                case "System.Single": return "float";
+                // Add more DB2 data types to C# types as needed
+                default: return "object";
+            }
+        }
+    }
+}
